@@ -90,7 +90,6 @@ new_df['sequence']= new_df['readme'].apply(prepareSequenceForBERT)
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-bert_model = bert_model.to(device)
 
 df_train, df_test = train_test_split(new_df, test_size=0.4, random_state=RANDOM_SEED)
 df_val, df_test = train_test_split(df_test, test_size=0.5, random_state=RANDOM_SEED)
@@ -148,7 +147,7 @@ val_data_loader = create_data_loader(df_val, bert_tokenizer, MAX_LEN, BATCH_SIZE
 test_data_loader = create_data_loader(df_test, bert_tokenizer, MAX_LEN, BATCH_SIZE)
 new_df.shape, df_train.shape, df_val.shape, df_test.shape
 
-
+bert_model = bert_model.to(device)
 optimizer = AdamW(bert_model.parameters(), lr=2e-5, correct_bias=False)
 total_steps = len(train_data_loader) * EPOCHS
 
