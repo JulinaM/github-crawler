@@ -13,3 +13,5 @@ ghe_repos_*
 *jsonl
 *xls
 .DS_Store
+analysis/*.bin
+*.bin
