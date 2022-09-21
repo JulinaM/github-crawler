@@ -5,18 +5,10 @@
 import sys
 sys.path.append('../')
 
-BATCH_SIZE = 16
-MAX_LEN = 512
-EPOCHS = 10
-RANDOM_SEED = 42
-model_name = 'bert-base-uncased'
-
-
 from utils.cloudant_utils import cloudant_db as db
 import numpy as np
 import pandas as pd
 from datetime import datetime
-import difflib
 from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -29,9 +21,16 @@ import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import roc_curve
 import matplotlib.pyplot as plt
-from readme_cleanup import readme_cleanup
+from prepare_sequence import prepareSequenceForBERT
 import random
 
+
+BATCH_SIZE = 16
+MAX_LEN = 512
+EPOCHS = 16
+RANDOM_SEED = 42
+model_name = 'bert-base-uncased'
+threshold = 1
 
 repos = [r for r in db.get_query_result({"type": "release"}, ["_id", "releases"], limit=10000, raw_result=True)["docs"]]
 values = [r for release in repos for r in release["releases"]]
@@ -41,51 +40,19 @@ df['contributors'] = df['contributors'].apply(lambda x:
                                               else [])
 df = df[~df['readme'].isnull()]
 new_df = df.groupby("repo").agg({"readme": list, "total_stars": list})
-new_df = new_df[new_df['readme'].map(len) > 2]
-new_df = new_df[:100]
+new_df = new_df[new_df['readme'].map(len) > threshold]
+# new_df = new_df[:100]
 
+new_df['k'] = new_df['total_stars'].map(lambda x: random.randint(threshold, len(x)))
+new_df['readme1'] = new_df.apply(lambda x: x.readme[:x.k], axis=1)
+new_df['target_val'] = new_df.apply(lambda x: x.total_stars[x.k-1], axis=1)
+new_df['target'] = new_df.apply(lambda x: 1 if x.target_val> 300 else 0, axis=1)
+print(new_df['target'].value_counts())
 
-def diff_calculator(str1, str2):
-   s = difflib.SequenceMatcher(lambda x : x == '')
-   s.set_seqs(str1, str2)
-   i = 1
-   # codes = []
-   # delete = []
-   # replace = {}
-   insert = []
-   for (opcode, before_start, before_end, after_start, after_end) in s.get_opcodes():
-       if opcode == 'equal':
-           continue
-       # codes.append(opcode)
-       # # print (i, ". %7s '%s :'  ----->  '%s'" % (opcode, test[0][before_start:before_end], test[1][after_start:after_end]))
-       # if opcode == 'replace':
-       #     replace[str1[before_start:before_end]]  = str2[after_start:after_end]
-       # if opcode == 'delete':
-       #     delete.append(str1[before_start:before_end])
-       if opcode == 'insert':
-           if str2[after_start:after_end]:
-            insert.append(str2[after_start:after_end])
-       i = i + 1
-   # return replace, delete, insert
-   return insert
-
-def create_a_sequence(readmeList):
-    result = []
-    for i in range(0,len(readmeList)-1):
-        first = readme_cleanup(readmeList[i])
-        second = readme_cleanup(readmeList[i+1])
-        insert = diff_calculator(first, second)
-        result.append(','.join(insert))
-    return result
-
-def prepareSequenceForBERT(readmeList):
-    diffList = create_a_sequence(readmeList)
-    s = '[CLS]' + "[SEP]".join([str(i) for i in diffList])
-    return s +'[SEP]'
-
-
-new_df['sequence']= new_df['readme'].apply(prepareSequenceForBERT)
-
+print(40*"*", 'Preparing sequence for BERT')
+new_df['sequence']= new_df['readme1'].apply(prepareSequenceForBERT)
+new_df.to_csv('csv/inputForBERT.csv')
+print('csv dumped to csv/inputForBERT.csv')
 
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
@@ -93,7 +60,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 df_train, df_test = train_test_split(new_df, test_size=0.4, random_state=RANDOM_SEED)
 df_val, df_test = train_test_split(df_test, test_size=0.5, random_state=RANDOM_SEED)
-df_train.shape, df_val.shape, df_test.shape
+print(df_train.shape, df_val.shape, df_test.shape)
 
 
 class ReadmeDataSet(Dataset):
@@ -107,13 +74,9 @@ class ReadmeDataSet(Dataset):
 
    def __getitem__(self, item):
       sequence = self._df.iloc[item]['sequence']
-      total_stars = self._df.iloc[item]['total_stars']
-    
-      k = random.randint(2, len(total_stars))
-      _sequence = sequence[:k]
-      target_value = total_stars[k-1]
-      target = 1 if target_value > 600 else 0
-      encoding = self.tokenizer.encode_plus(_sequence,
+      target = self._df.iloc[item]['target']      
+
+      encoding = self.tokenizer.encode_plus(sequence,
                                      None,
                                      max_length = self.max_len,
                                      truncation=True,
@@ -122,7 +85,7 @@ class ReadmeDataSet(Dataset):
                                      return_token_type_ids=True)
 
       return {
-      'sequence': _sequence,
+      'sequence': sequence,
       'input_ids': torch.tensor(encoding.input_ids, dtype=torch.long),
       'attention_mask':  torch.tensor(encoding.attention_mask, dtype=torch.long),
       'token_type_ids': torch.tensor(encoding.token_type_ids, dtype=torch.long),
@@ -257,7 +220,7 @@ outputss, y_sequences, y_pred, y_pred_probs, y_test = get_predictions(bert_model
 logit_roc_auc = roc_auc_score(y_test, y_pred)
 fpr, tpr, thresholds = roc_curve(y_test.numpy(), y_pred_probs[:, 1:].numpy())
 plt.figure()
-plt.plot(fpr, tpr, label='Logistic Regression (area = %0.2f)' % logit_roc_auc)
+plt.plot(fpr, tpr, label='BERT(area = %0.2f)' % logit_roc_auc)
 plt.plot([0, 1], [0, 1],'r--')
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.0])
@@ -274,4 +237,7 @@ someListOfLists = list(zip(y_sequences, y_test.numpy(), y_pred.numpy(), y_pred_p
 npa = np.asarray(someListOfLists)
 dff = pd.DataFrame(someListOfLists, columns = ['readme', 'Real', 'Predicted', 'Pred-prob', 'All Pred-probs' ])
 print(dff)
+dff.to_csv('csv/test_result.csv')
+
+
 
