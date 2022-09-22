@@ -4,9 +4,7 @@ import pandas as pd
 from datetime import datetime
 import difflib
 from collections import defaultdict
-from numba import jit
 
-@jit
 def diff_calculator(str1, str2):
    s = difflib.SequenceMatcher(lambda x : x == '')
    s.set_seqs(str1, str2)
@@ -31,7 +29,7 @@ def diff_calculator(str1, str2):
    # return replace, delete, insert
    return insert
 
-@jit
+
 def create_a_sequence(readmeList):
     result = []
     for i in range(0,len(readmeList)-1):
@@ -41,7 +39,7 @@ def create_a_sequence(readmeList):
         result.append(','.join(insert))
     return result
 
-@jit
+
 def prepareSequenceForBERT(readmeList):
     diffList = create_a_sequence(readmeList)
     s = '[CLS]' + "[SEP]".join([str(i) for i in diffList])
