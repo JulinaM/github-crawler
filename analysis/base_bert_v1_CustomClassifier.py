@@ -11,7 +11,7 @@ from datetime import datetime
 from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset, DataLoader
-from transformers import BertTokenizer
+from transformers import BertTokenizer, BertModel
 from transformers import BertForSequenceClassification, AdamW, BertConfig
 from transformers import get_linear_schedule_with_warmup
 from torch import nn
@@ -35,7 +35,7 @@ def load_df(filepath):
   if filepath:
     try:
       print('Reading from ', filepath)
-      new_df = pd.read_csv(filepath)
+      new_df = pd.read_csv('csv/inputForBERT_2022_09_21-09_14PM.csv')
     except:
       print('Failed to load ', filepath)
 
@@ -115,7 +115,7 @@ def train_epoch( model, data_loader, loss_fn, optimizer, device, scheduler, n_ex
     attention_mask = d["attention_mask"].to(device)
     token_type_ids = d["token_type_ids"].to(device)
     targets = d["targets"].to(device)
-    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+    outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
 
     _, preds = torch.max(outputs, dim=1)
     loss = loss_fn(outputs, targets)
@@ -144,8 +144,8 @@ def eval_model(model, data_loader, loss_fn, device, n_examples):
       attention_mask = d["attention_mask"].to(device)
       targets = d["targets"].to(device)
       token_type_ids = d["token_type_ids"].to(device)
+      outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
 
-      outputs = model(input_ids=input_ids, attention_mask=attention_mask)
       _, preds = torch.max(outputs, dim=1)
 
       loss = loss_fn(outputs, targets)
@@ -187,21 +187,21 @@ def get_predictions(model, data_loader):
   real_values = torch.stack(real_values).cpu()
   return outputs, sequences, predictions, prediction_probs, real_values
 
-  class BertForRepoClassification(nn.Module):
-      def __init__(self, n_classes):
-          super(BertForRepoClassification, self).__init__()
-          self.model = BertModel.from_pretrained('bert-base-uncased')
-          self.drop_out = nn.Dropout(0.3)
-          self.classifier = nn.Linear(768, n_classes)
-          
-      def forward(self, input_ids, attention_mask,token_type_ids):
-          outputs = self.model(input_ids=input_ids, attention_mask=attention_mask,token_type_ids=token_type_ids)
-  #         last_hidden_state = last_hidden_state[:, 0]
-  #         print(outputs)
-  #         print(pooled_output.shape)
-          pooled_output = self.drop_out(outputs.pooler_output)
-          output = self.classifier(pooled_output)
-          return output
+class BertForRepoClassification(nn.Module):
+  def __init__(self, n_classes):
+      super(BertForRepoClassification, self).__init__()
+      self.model = BertModel.from_pretrained('bert-base-uncased')
+      self.drop_out = nn.Dropout(0.3)
+      self.classifier = nn.Linear(768, n_classes)
+      
+  def forward(self, input_ids, attention_mask,token_type_ids):
+      outputs = self.model(input_ids=input_ids, attention_mask=attention_mask,token_type_ids=token_type_ids)
+#         last_hidden_state = last_hidden_state[:, 0]
+#         print(outputs)
+#         print(pooled_output.shape)
+      pooled_output = self.drop_out(outputs.pooler_output)
+      output = self.classifier(pooled_output)
+      return output
 
 if __name__ == "__main__":
     new_df = load_df(True)
@@ -277,6 +277,7 @@ if __name__ == "__main__":
     dff = pd.DataFrame(someListOfLists, columns = ['readme', 'Real', 'Predicted', 'Pred-prob', 'All Pred-probs' ])
     print(dff)
     dff.to_csv('csv/test_result'+ current_time+'.csv')
+
 
 
 

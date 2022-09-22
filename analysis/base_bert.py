@@ -113,9 +113,10 @@ def train_epoch( model, data_loader, loss_fn, optimizer, device, scheduler, n_ex
   for d in data_loader:
     input_ids = d["input_ids"].to(device)
     attention_mask = d["attention_mask"].to(device)
+    token_type_ids = d["token_type_ids"].to(device)
     targets = d["targets"].to(device)
 
-    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+    outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
 
     _, preds = torch.max(outputs.logits, dim=1)
     loss = loss_fn(outputs.logits, targets)
@@ -142,9 +143,10 @@ def eval_model(model, data_loader, loss_fn, device, n_examples):
     for d in data_loader:
       input_ids = d["input_ids"].to(device)
       attention_mask = d["attention_mask"].to(device)
+      token_type_ids = d["token_type_ids"].to(device)
       targets = d["targets"].to(device)
 
-      outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+      outputs = model(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
       _, preds = torch.max(outputs.logits, dim=1)
 
       loss = loss_fn(outputs.logits, targets)
