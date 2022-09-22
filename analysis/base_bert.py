@@ -56,7 +56,6 @@ def load_df(filepath):
     new_df['readme1'] = new_df.apply(lambda x: x.readme[:x.k], axis=1)
     new_df['target_val'] = new_df.apply(lambda x: x.total_stars[x.k-1], axis=1)
     new_df['target'] = new_df.apply(lambda x: 1 if x.target_val> 600 else 0, axis=1)
-    print(new_df['target'].value_counts())
 
     print(40*"*", 'Preparing sequence for BERT')
     new_df['sequence']= new_df['readme1'].apply(prepareSequenceForBERT)
@@ -65,7 +64,8 @@ def load_df(filepath):
     filepath = 'csv/inputForBERT_' + current_time + '.csv'
     new_df.to_csv(filepath)
     print('Sequence File saved to ', filepath)
-
+    
+  print(new_df['target'].value_counts())
   return new_df
 
 
@@ -253,8 +253,8 @@ if __name__ == "__main__":
     plt.figure()
     plt.plot(fpr, tpr, label='BERT(area = %0.2f)' % logit_roc_auc)
     plt.plot([0, 1], [0, 1],'r--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.0])
+    plt.xlim([-0.05, 1.0])
+    plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('Receiver operating characteristic')

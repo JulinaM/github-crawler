@@ -66,8 +66,8 @@ def load_df(filepath):
     new_df.to_csv(filepath)
     print('Sequence File saved to ', filepath)
 
+  print(new_df['target'].value_counts())
   return new_df
-
 
 class ReadmeDataSet(Dataset):
    def __init__(self, _df, tokenizer, max_len):
@@ -262,8 +262,8 @@ if __name__ == "__main__":
     plt.figure()
     plt.plot(fpr, tpr, label='BERT(area = %0.2f)' % logit_roc_auc)
     plt.plot([0, 1], [0, 1],'r--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.0])
+    plt.xlim([-0.05, 1.0])
+    plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('Receiver operating characteristic')
