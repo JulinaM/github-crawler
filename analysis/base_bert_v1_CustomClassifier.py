@@ -192,7 +192,7 @@ class BertForRepoClassification(nn.Module):
       super(BertForRepoClassification, self).__init__()
       self.model = BertModel.from_pretrained('bert-base-uncased')
       self.drop_out = nn.Dropout(0.3)
-      self.pre_classifier = torch.nn.Linear(768, 768)
+#       self.pre_classifier = torch.nn.Linear(768, 768)
       self.classifier = nn.Linear(768, n_classes)
       
   def forward(self, input_ids, attention_mask,token_type_ids):
@@ -224,45 +224,51 @@ if __name__ == "__main__":
     torch.manual_seed(RANDOM_SEED)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    bert_model = bert_model.to(device)
-    optimizer = AdamW(bert_model.parameters(), lr=2e-5, correct_bias=False)
-    total_steps = len(train_data_loader) * EPOCHS
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
-
     print(40*"*", 'Training')
-    print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    history = defaultdict(list)
-    loss_fn = nn.CrossEntropyLoss().to(device)
-    best_accuracy = 0
+    current_time = datetime.now().strftime("%Y_%m_%d-%I_%M%p")
+    print(current_time)
+    if(True):
+      bert_model = BertForRepoClassification(2)
+      bert_model = bert_model.to(device)
+      optimizer = AdamW(bert_model.parameters(), lr=2e-5, correct_bias=False)
+      total_steps = len(train_data_loader) * EPOCHS
+      scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
-    for epoch in range(EPOCHS):
-        print(f'Epoch {epoch + 1}/{EPOCHS}')
-        print('-' * 10)
+      history = defaultdict(list)
+      loss_fn = nn.CrossEntropyLoss().to(device)
+      best_accuracy = 0
 
-        train_acc, train_loss = train_epoch(bert_model, train_data_loader, loss_fn, optimizer, device, scheduler, len(df_train))
-        print(f'Train loss {train_loss} accuracy {train_acc}')
+      for epoch in range(EPOCHS):
+          print(f'Epoch {epoch + 1}/{EPOCHS}')
+          print('-' * 10)
 
-        val_acc, val_loss = eval_model( bert_model, val_data_loader, loss_fn, device, len(df_val) )
+          train_acc, train_loss = train_epoch(bert_model, train_data_loader, loss_fn, optimizer, device, scheduler, len(df_train))
+          print(f'Train loss {train_loss} accuracy {train_acc}')
 
-        print(f'Val   loss {val_loss} accuracy {val_acc}')
-        print()
+          val_acc, val_loss = eval_model( bert_model, val_data_loader, loss_fn, device, len(df_val) )
 
-        history['train_acc'].append(train_acc)
-        history['train_loss'].append(train_loss)
-        history['val_acc'].append(val_acc)
-        history['val_loss'].append(val_loss)
+          print(f'Val   loss {val_loss} accuracy {val_acc}')
+          print()
 
-        if val_acc > best_accuracy:
-          current_time = datetime.now().strftime("%Y_%m_%d-%I_%M%p")
-          torch.save(bert_model.state_dict(), 'checkpoint/best_model_state' + current_time+'.bin')
-          best_accuracy = val_acc
+          history['train_acc'].append(train_acc)
+          history['train_loss'].append(train_loss)
+          history['val_acc'].append(val_acc)
+          history['val_loss'].append(val_loss)
 
+          if val_acc > best_accuracy:
+            curr_time = datetime.now().strftime("%Y_%m_%d-%I_%M%p")
+            torch.save(bert_model.state_dict(), 'checkpoint/best_model_state' + curr_time+'.bin')
+            best_accuracy = val_acc
+
+    else:
+      bert_model.load_state_dict(torch.load('checkpoint/best_model_state2022_09_22-02_24PM.bin'))
+      bert_model = bert_model.to(device)
 
     outputss, y_sequences, y_pred, y_pred_probs, y_test = get_predictions(bert_model, val_data_loader)
     logit_roc_auc = roc_auc_score(y_test, y_pred)
     fpr, tpr, thresholds = roc_curve(y_test.numpy(), y_pred_probs[:, 1:].numpy())
     plt.figure()
-    plt.plot(fpr, tpr, label='BERT(area = %0.2f)' % logit_roc_auc)
+    plt.plot(fpr, tpr, label='Custom BERT(area = %0.2f)' % logit_roc_auc)
     plt.plot([0, 1], [0, 1],'r--')
     plt.xlim([-0.05, 1.0])
     plt.ylim([0.0, 1.05])
@@ -282,6 +288,7 @@ if __name__ == "__main__":
     
     test_acc, _ = eval_model(bert_model, test_data_loader, loss_fn, device, len(df_test))
     print(test_acc.item())
+    print(current_time)
 
 
 
