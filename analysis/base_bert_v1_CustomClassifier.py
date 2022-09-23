@@ -192,6 +192,7 @@ class BertForRepoClassification(nn.Module):
       super(BertForRepoClassification, self).__init__()
       self.model = BertModel.from_pretrained('bert-base-uncased')
       self.drop_out = nn.Dropout(0.3)
+      self.pre_classifier = torch.nn.Linear(768, 768)
       self.classifier = nn.Linear(768, n_classes)
       
   def forward(self, input_ids, attention_mask,token_type_ids):
@@ -199,6 +200,8 @@ class BertForRepoClassification(nn.Module):
 #         last_hidden_state = last_hidden_state[:, 0]
 #         print(outputs)
 #         print(pooled_output.shape)
+#       pooled_output = self.pre_classifier(outputs.pooler_output)
+#       pooled_output = torch.nn.ReLU()(pooled_output)
       pooled_output = self.drop_out(outputs.pooler_output)
       output = self.classifier(pooled_output)
       return output
@@ -254,9 +257,8 @@ if __name__ == "__main__":
           torch.save(bert_model.state_dict(), 'checkpoint/best_model_state' + current_time+'.bin')
           best_accuracy = val_acc
 
-    test_acc, _ = eval_model(bert_model, test_data_loader, loss_fn, device, len(df_test))
-    test_acc.item()
-    outputss, y_sequences, y_pred, y_pred_probs, y_test = get_predictions(bert_model, train_data_loader)
+
+    outputss, y_sequences, y_pred, y_pred_probs, y_test = get_predictions(bert_model, val_data_loader)
     logit_roc_auc = roc_auc_score(y_test, y_pred)
     fpr, tpr, thresholds = roc_curve(y_test.numpy(), y_pred_probs[:, 1:].numpy())
     plt.figure()
@@ -276,7 +278,10 @@ if __name__ == "__main__":
     npa = np.asarray(someListOfLists)
     dff = pd.DataFrame(someListOfLists, columns = ['readme', 'Real', 'Predicted', 'Pred-prob', 'All Pred-probs' ])
     print(dff)
-    dff.to_csv('csv/test_result'+ current_time+'.csv')
+    dff.to_csv('csv/prediction_result'+ current_time+'.csv')
+    
+    test_acc, _ = eval_model(bert_model, test_data_loader, loss_fn, device, len(df_test))
+    print(test_acc.item())
 
 
 

@@ -247,7 +247,7 @@ if __name__ == "__main__":
     test_acc, _ = eval_model(bert_model, test_data_loader, loss_fn, device, len(df_test))
     test_acc.item()
 
-    outputss, y_sequences, y_pred, y_pred_probs, y_test = get_predictions(bert_model, train_data_loader)
+    outputss, y_sequences, y_pred, y_pred_probs, y_test = get_predictions(bert_model, val_data_loader)
     logit_roc_auc = roc_auc_score(y_test, y_pred)
     fpr, tpr, thresholds = roc_curve(y_test.numpy(), y_pred_probs[:, 1:].numpy())
     plt.figure()
@@ -267,4 +267,5 @@ if __name__ == "__main__":
     npa = np.asarray(someListOfLists)
     dff = pd.DataFrame(someListOfLists, columns = ['readme', 'Real', 'Predicted', 'Pred-prob', 'All Pred-probs' ])
     print(dff)
-    dff.to_csv('csv/test_result' + current_time + '.csv')
+    dff.to_csv('csv/prediction_result'+ current_time+'.csv')
+
