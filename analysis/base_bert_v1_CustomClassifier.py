@@ -214,7 +214,7 @@ if __name__ == "__main__":
     print(df_train.shape, df_val.shape, df_test.shape)
 
     bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
-    bert_model = BertForRepoClassification(2)
+#     bert_model = BertForRepoClassification(2)
     train_data_loader = create_data_loader(df_train, bert_tokenizer, MAX_LEN, BATCH_SIZE)
     val_data_loader = create_data_loader(df_val, bert_tokenizer, MAX_LEN, BATCH_SIZE)
     test_data_loader = create_data_loader(df_test, bert_tokenizer, MAX_LEN, BATCH_SIZE)
@@ -256,8 +256,7 @@ if __name__ == "__main__":
           history['val_loss'].append(val_loss)
 
           if val_acc > best_accuracy:
-            curr_time = datetime.now().strftime("%Y_%m_%d-%I_%M%p")
-            torch.save(bert_model.state_dict(), 'checkpoint/best_model_state' + curr_time+'.bin')
+            torch.save(bert_model.state_dict(), 'checkpoint/best_model_state' + current_time+'.bin')
             best_accuracy = val_acc
 
     else:
