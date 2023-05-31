@@ -26,7 +26,7 @@ import random
 
 BATCH_SIZE = 16
 MAX_LEN = 512
-EPOCHS = 16
+EPOCHS = 24
 RANDOM_SEED = 42
 model_name = 'bert-base-uncased'
 threshold = 1
@@ -87,7 +87,7 @@ class ReadmeDataSet(Dataset):
                                      max_length = self.max_len,
                                      truncation=True,
                                      add_special_tokens=True,
-                                     pad_to_max_length=True,
+                                     padding='max_length',
                                      return_token_type_ids=True)
 
       return {
@@ -246,6 +246,15 @@ if __name__ == "__main__":
             curr_time = datetime.now().strftime("%Y_%m_%d-%I_%M%p")
             torch.save(bert_model.state_dict(), 'checkpoint/best_model_state' + curr_time+'.bin')
             best_accuracy = val_acc
+            
+#        plt.plot(history['train_acc'], label='train accuracy')
+#        plt.plot(history['val_acc'], label='validation accuracy')
+#        plt.title('Training history')
+#        plt.ylabel('Accuracy')
+#        plt.xlabel('Epoch')
+#        plt.legend()
+#        plt.ylim([0, 1]);
+#        plt.savefig('images/training_history '+current_time+'.png')
 
     else:
       bert_model.load_state_dict(torch.load('checkpoint/best_model_state2022_09_22-02_24PM.bin'))
