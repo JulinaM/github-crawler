@@ -1,0 +1,13 @@
+BATCH_SIZE = 8
+MAX_LEN = 512
+EPOCHS = 32
+RANDOM_SEED = 42
+model_name = 'bert-base-uncased'
+input = inputForBERT_2022_12_14-06_21PM.csv
+0    2681
+1     515
+((1917, 8), (639, 8), (640, 8), device(type='cuda', index=3))
+test acc0.815625
+train aucroc 0.815
+val aucroc 0.638
+after calib 0.64
